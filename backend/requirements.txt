@@ -1,0 +1,35 @@
+# Dependências do Sistema de Gestão Escolar
+# Backend - FastAPI + SQLAlchemy + MySQL/SQLite
+
+# Framework web
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+
+# Banco de dados
+sqlalchemy==2.0.23
+pymysql==1.1.0  # Driver MySQL para Python
+cryptography==41.0.8  # Necessário para pymysql
+
+# Validação de dados
+pydantic==2.5.0
+pydantic[email]==2.5.0
+
+# CORS e middleware
+python-multipart==0.0.6
+
+# Utilitários para desenvolvimento
+python-dotenv==1.0.0
+
+# Dependências opcionais para desenvolvimento e testes
+# pytest==7.4.3
+# pytest-asyncio==0.21.1
+# httpx==0.25.2  # Para testes de API
+
+# Formatação e linting (opcional)
+# black==23.11.0
+# flake8==6.1.0
+# isort==5.12.0
+
+# Documentação automática (incluído no FastAPI)
+# swagger-ui-bundle  # Incluído no FastAPI
+# redoc  # Incluído no FastAPI

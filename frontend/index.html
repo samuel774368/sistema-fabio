@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestão Escolar</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Header -->
+    <header class="header" role="banner">
+        <div class="header-content">
+            <h1 class="logo">Gestão Escolar</h1>
+            <div class="search-container">
+                <input 
+                    type="text" 
+                    id="searchInput" 
+                    placeholder="Buscar por nome do aluno..." 
+                    aria-label="Buscar aluno por nome"
+                    class="search-input"
+                >
+                <button type="button" class="search-btn" aria-label="Executar busca">
+                    🔍
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-container">
+        <!-- Sidebar -->
+        <aside class="sidebar" role="complementary">
+            <section class="filters-section">
+                <h2>Filtros</h2>
+                <div class="filter-group">
+                    <label for="filterTurma">Turma:</label>
+                    <select id="filterTurma" aria-label="Filtrar por turma">
+                        <option value="">Todas as turmas</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="filterStatus">Status:</label>
+                    <select id="filterStatus" aria-label="Filtrar por status">
+                        <option value="">Todos os status</option>
+                        <option value="ativo">Ativo</option>
+                        <option value="inativo">Inativo</option>
+                    </select>
+                </div>
+                <button type="button" id="clearFilters" class="btn btn-secondary">
+                    Limpar Filtros
+                </button>
+            </section>
+
+            <section class="stats-section">
+                <h2>Estatísticas</h2>
+                <div class="stat-item">
+                    <span class="stat-label">Total de Alunos:</span>
+                    <span id="totalAlunos" class="stat-value">0</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Alunos Ativos:</span>
+                    <span id="alunosAtivos" class="stat-value">0</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Turmas:</span>
+                    <span id="totalTurmas" class="stat-value">0</span>
+                </div>
+            </section>
+        </aside>
+
+        <!-- Content Area -->
+        <section class="content-area" role="main">
+            <div class="content-header">
+                <nav class="tabs" role="tablist">
+                    <button 
+                        type="button" 
+                        class="tab-btn active" 
+                        data-tab="alunos"
+                        role="tab"
+                        aria-selected="true"
+                        aria-controls="alunos-panel"
+                        id="tab-alunos"
+                    >
+                        Alunos
+                    </button>
+                    <button 
+                        type="button" 
+                        class="tab-btn" 
+                        data-tab="turmas"
+                        role="tab"
+                        aria-selected="false"
+                        aria-controls="turmas-panel"
+                        id="tab-turmas"
+                    >
+                        Turmas
+                    </button>
+                    <button 
+                        type="button" 
+                        class="tab-btn" 
+                        data-tab="relatorios"
+                        role="tab"
+                        aria-selected="false"
+                        aria-controls="relatorios-panel"
+                        id="tab-relatorios"
+                    >
+                        Relatórios
+                    </button>
+                </nav>
+                
+                <div class="action-buttons">
+                    <button type="button" id="newAlunoBtn" class="btn btn-primary" aria-label="Adicionar novo aluno">
+                        + Novo Aluno
+                    </button>
+                    <button type="button" id="newTurmaBtn" class="btn btn-primary" aria-label="Adicionar nova turma">
+                        + Nova Turma
+                    </button>
+                    <button type="button" id="newMatriculaBtn" class="btn btn-accent" aria-label="Nova matrícula">
+                        + Nova Matrícula
+                    </button>
+                </div>
+            </div>
+
+            <!-- Alunos Panel -->
+            <div id="alunos-panel" class="tab-content active" role="tabpanel" aria-labelledby="tab-alunos">
+                <div class="controls">
+                    <div class="sort-controls">
+                        <label for="sortAlunos">Ordenar por:</label>
+                        <select id="sortAlunos" aria-label="Ordenar alunos">
+                            <option value="nome">Nome (A-Z)</option>
+                            <option value="nome-desc">Nome (Z-A)</option>
+                            <option value="idade">Idade (Crescente)</option>
+                            <option value="idade-desc">Idade (Decrescente)</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div id="alunosList" class="data-grid" aria-live="polite" aria-label="Lista de alunos">
+                    <!-- Alunos serão carregados via JavaScript -->
+                </div>
+            </div>
+
+            <!-- Turmas Panel -->
+            <div id="turmas-panel" class="tab-content" role="tabpanel" aria-labelledby="tab-turmas">
+                <div id="turmasList" class="data-grid" aria-live="polite" aria-label="Lista de turmas">
+                    <!-- Turmas serão carregadas via JavaScript -->
+                </div>
+            </div>
+
+            <!-- Relatórios Panel -->
+            <div id="relatorios-panel" class="tab-content" role="tabpanel" aria-labelledby="tab-relatorios">
+                <div id="relatoriosContent">
+                    <!-- Estatísticas serão inseridas aqui pelo JavaScript -->
+                </div>
+                <div class="export-section">
+                    <h3>Exportar Dados</h3>
+                    <div class="export-controls">
+                        <button type="button" id="exportAlunosCSV" class="btn btn-secondary">
+                            📊 Exportar Alunos (CSV)
+                        </button>
+                        <button type="button" id="exportAlunosJSON" class="btn btn-secondary">
+                            📄 Exportar Alunos (JSON)
+                        </button>
+                        <button type="button" id="exportMatriculasCSV" class="btn btn-secondary">
+                            📊 Exportar Matrículas (CSV)
+                        </button>
+                        <button type="button" id="exportMatriculasJSON" class="btn btn-secondary">
+                            📄 Exportar Matrículas (JSON)
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Modal Novo Aluno -->
+    <div id="modalAluno" class="modal" role="dialog" aria-labelledby="modalAlunoTitle" aria-hidden="true">
+        <div class="modal-content">
+            <header class="modal-header">
+                <h2 id="modalAlunoTitle">Novo Aluno</h2>
+                <button type="button" class="close-btn" aria-label="Fechar modal">×</button>
+            </header>
+            <form id="alunoForm" class="modal-body">
+                <div class="form-group">
+                    <label for="alunoNome">Nome *</label>
+                    <input 
+                        type="text" 
+                        id="alunoNome" 
+                        name="nome" 
+                        required 
+                        minlength="3" 
+                        maxlength="80"
+                        aria-describedby="nomeHelp"
+                    >
+                    <small id="nomeHelp" class="form-help">Entre 3 e 80 caracteres</small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="alunoDataNascimento">Data de Nascimento *</label>
+                    <input 
+                        type="date" 
+                        id="alunoDataNascimento" 
+                        name="data_nascimento" 
+                        required
+                        aria-describedby="dataHelp"
+                    >
+                    <small id="dataHelp" class="form-help">Aluno deve ter pelo menos 5 anos</small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="alunoEmail">Email</label>
+                    <input 
+                        type="email" 
+                        id="alunoEmail" 
+                        name="email"
+                        aria-describedby="emailHelp"
+                    >
+                    <small id="emailHelp" class="form-help">Email válido (opcional)</small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="alunoStatus">Status *</label>
+                    <select id="alunoStatus" name="status" required>
+                        <option value="">Selecione o status</option>
+                        <option value="ativo">Ativo</option>
+                        <option value="inativo">Inativo</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="alunoTurma">Turma</label>
+                    <select id="alunoTurma" name="turma_id">
+                        <option value="">Sem turma</option>
+                    </select>
+                </div>
+                
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" id="cancelAlunoBtn">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Nova Turma -->
+    <div id="modalTurma" class="modal" role="dialog" aria-labelledby="modalTurmaTitle" aria-hidden="true">
+        <div class="modal-content">
+            <header class="modal-header">
+                <h2 id="modalTurmaTitle">Nova Turma</h2>
+                <button type="button" class="close-btn" aria-label="Fechar modal">×</button>
+            </header>
+            <form id="turmaForm" class="modal-body">
+                <div class="form-group">
+                    <label for="turmaNome">Nome da Turma *</label>
+                    <input 
+                        type="text" 
+                        id="turmaNome" 
+                        name="nome" 
+                        required 
+                        minlength="2" 
+                        maxlength="50"
+                        aria-describedby="turmaHelp"
+                    >
+                    <small id="turmaHelp" class="form-help">Ex: 1º Ano A, 2º Ano B</small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="turmaCapacidade">Capacidade *</label>
+                    <input 
+                        type="number" 
+                        id="turmaCapacidade" 
+                        name="capacidade" 
+                        required 
+                        min="1" 
+                        max="50"
+                        aria-describedby="capacidadeHelp"
+                    >
+                    <small id="capacidadeHelp" class="form-help">Entre 1 e 50 alunos</small>
+                </div>
+                
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" id="cancelTurmaBtn">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Nova Matrícula -->
+    <div id="modalMatricula" class="modal" role="dialog" aria-labelledby="modalMatriculaTitle" aria-hidden="true">
+        <div class="modal-content">
+            <header class="modal-header">
+                <h2 id="modalMatriculaTitle">Nova Matrícula</h2>
+                <button type="button" class="close-btn" aria-label="Fechar modal">×</button>
+            </header>
+            <form id="matriculaForm" class="modal-body">
+                <div class="form-group">
+                    <label for="matriculaAluno">Aluno *</label>
+                    <select id="matriculaAluno" name="aluno_id" required>
+                        <option value="">Selecione o aluno</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="matriculaTurma">Turma *</label>
+                    <select id="matriculaTurma" name="turma_id" required>
+                        <option value="">Selecione a turma</option>
+                    </select>
+                </div>
+                
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" id="cancelMatriculaBtn">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Matricular</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Toast para feedback -->
+    <div id="toast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+        <span id="toastMessage"></span>
+        <button type="button" class="toast-close" aria-label="Fechar notificação">×</button>
+    </div>
+
+    <script src="sistema_final.js"></script>
+</body>
+</html>
