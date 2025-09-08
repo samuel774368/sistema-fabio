@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portal do Estudante</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        /* Estilos específicos para usuário comum */
+        .user-dashboard {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .welcome-banner {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 2rem;
+            border-radius: 20px;
+            margin-bottom: 2rem;
+            text-align: center;
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.25);
+        }
+
+        .welcome-banner h1 {
+            font-size: 2.5rem;
+            margin: 0 0 1rem 0;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .welcome-banner p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+            margin: 0;
+        }
+
+        .stats-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+        }
+
+        .stat-card .icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        .stat-card h3 {
+            color: #333;
+            margin: 0 0 0.5rem 0;
+            font-size: 1.1rem;
+        }
+
+        .stat-card .number {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #667eea;
+            margin: 0;
+        }
+
+        .alunos-section {
+            background: white;
+            padding: 2rem;
+            border-radius: 20px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .section-title {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            color: #333;
+        }
+
+        .section-title h2 {
+            margin: 0;
+            font-size: 1.8rem;
+        }
+
+        .search-bar {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            align-items: center;
+        }
+
+        .search-bar input {
+            flex: 1;
+            padding: 1rem;
+            border: 2px solid #e1e5e9;
+            border-radius: 12px;
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+
+        .search-bar input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .search-bar select {
+            padding: 1rem;
+            border: 2px solid #e1e5e9;
+            border-radius: 12px;
+            font-size: 1rem;
+            min-width: 200px;
+        }
+
+        .no-permissions {
+            text-align: center;
+            padding: 3rem;
+            color: #666;
+        }
+
+        .no-permissions .icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+
+        @media (max-width: 768px) {
+            .user-dashboard {
+                padding: 1rem;
+            }
+
+            .welcome-banner h1 {
+                font-size: 1.8rem;
+            }
+
+            .stats-cards {
+                grid-template-columns: 1fr;
+            }
+
+            .search-bar {
+                flex-direction: column;
+                align-items: stretch;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header Simples -->
+    <header class="header" role="banner" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+        <div class="header-content">
+            <h1 class="logo" style="color: white;">📚 Portal do Estudante</h1>
+            <div class="user-info">
+                <span id="userWelcome" style="color: white;">Carregando...</span>
+                <button type="button" id="perfilBtn" class="btn" style="background: rgba(255,255,255,0.2); color: white; border: 2px solid rgba(255,255,255,0.3); margin-left: 10px; margin-right: 10px;">
+                    👤 Meu Perfil
+                </button>
+                <button type="button" id="logoutBtn" class="btn" style="background: rgba(255,255,255,0.2); color: white; border: 2px solid rgba(255,255,255,0.3); margin-left: 5px;">
+                    🚪 Logout
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Dashboard para Usuário -->
+    <main class="user-dashboard">
+        <!-- Banner de Boas-vindas -->
+        <div class="welcome-banner">
+            <h1>Bem-vindo ao Portal! 🎓</h1>
+            <p>Consulte informações sobre alunos e turmas da escola</p>
+        </div>
+
+        <!-- Estatísticas -->
+        <div class="stats-cards">
+            <div class="stat-card">
+                <div class="icon">👥</div>
+                <h3>Total de Alunos</h3>
+                <div class="number" id="totalAlunos">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="icon">✅</div>
+                <h3>Alunos Ativos</h3>
+                <div class="number" id="alunosAtivos">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="icon">🏫</div>
+                <h3>Total de Turmas</h3>
+                <div class="number" id="totalTurmas">0</div>
+            </div>
+        </div>
+
+        <!-- Lista de Alunos -->
+        <section class="alunos-section">
+            <div class="section-title">
+                <span style="font-size: 2rem;">👨‍🎓</span>
+                <h2>Lista de Alunos</h2>
+            </div>
+
+            <!-- Filtros de Busca -->
+            <div class="search-bar">
+                <input type="text" id="searchInput" placeholder="🔍 Buscar por nome do aluno...">
+                <select id="filtroTurma">
+                    <option value="">📋 Todas as turmas</option>
+                </select>
+                <select id="filtroStatus">
+                    <option value="">📊 Todos os status</option>
+                    <option value="ativo">✅ Ativo</option>
+                    <option value="inativo">❌ Inativo</option>
+                </select>
+            </div>
+
+            <!-- Lista de Alunos -->
+            <div id="alunosList" class="data-grid">
+                <!-- Alunos serão carregados via JavaScript -->
+            </div>
+        </section>
+    </main>
+
+    <!-- Modal Meu Perfil -->
+    <div id="modalPerfil" class="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;">
+        <div class="modal-content" style="background: white; border-radius: 20px; width: 90%; max-width: 600px; max-height: 90vh; overflow-y: auto;">
+            <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; padding: 1.5rem; border-bottom: 1px solid #e9ecef;">
+                <h2 style="margin: 0; color: #667eea;">👤 Meu Perfil</h2>
+                <button type="button" class="close-btn" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #6c757d; padding: 0.5rem; border-radius: 4px;">×</button>
+            </div>
+            <div class="modal-body" style="padding: 1.5rem;">
+                <div id="perfilContent" class="perfil-content">
+                    <div class="loading">Carregando informações do perfil...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="usuario.js"></script>
+</body>
+</html>

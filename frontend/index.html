@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestão Escolar</title>
+    <title>Admin - Gestão Escolar</title>
     <link rel="stylesheet" href="styles.css">
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
 </head>
@@ -11,7 +11,16 @@
     <!-- Header -->
     <header class="header" role="banner">
         <div class="header-content">
-            <h1 class="logo">Gestão Escolar</h1>
+            <h1 class="logo">👑 Admin - Gestão Escolar</h1>
+            <div class="user-info">
+                <span id="userWelcome">Carregando...</span>
+                <button type="button" id="perfilBtn" class="btn btn-secondary" style="margin-left: 10px; margin-right: 10px;">
+                    👤 Meu Perfil
+                </button>
+                <button type="button" id="logoutBtn" class="btn btn-secondary" style="margin-left: 5px;">
+                    🚪 Logout
+                </button>
+            </div>
             <div class="search-container">
                 <input 
                     type="text" 
@@ -109,13 +118,13 @@
                 </nav>
                 
                 <div class="action-buttons">
-                    <button type="button" id="newAlunoBtn" class="btn btn-primary" aria-label="Adicionar novo aluno">
+                    <button type="button" id="newAlunoBtn" class="btn btn-primary admin-only" aria-label="Adicionar novo aluno" style="display: none;">
                         + Novo Aluno
                     </button>
-                    <button type="button" id="newTurmaBtn" class="btn btn-primary" aria-label="Adicionar nova turma">
+                    <button type="button" id="newTurmaBtn" class="btn btn-primary admin-only" aria-label="Adicionar nova turma" style="display: none;">
                         + Nova Turma
                     </button>
-                    <button type="button" id="newMatriculaBtn" class="btn btn-accent" aria-label="Nova matrícula">
+                    <button type="button" id="newMatriculaBtn" class="btn btn-accent admin-only" aria-label="Nova matrícula" style="display: none;">
                         + Nova Matrícula
                     </button>
                 </div>
@@ -313,6 +322,21 @@
                     <button type="submit" class="btn btn-primary">Matricular</button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- Modal Meu Perfil -->
+    <div id="modalPerfil" class="modal" role="dialog" aria-labelledby="modalPerfilTitle" aria-hidden="true">
+        <div class="modal-content">
+            <header class="modal-header">
+                <h2 id="modalPerfilTitle">👤 Meu Perfil</h2>
+                <button type="button" class="close-btn" aria-label="Fechar modal">×</button>
+            </header>
+            <div class="modal-body">
+                <div id="perfilContent" class="perfil-content">
+                    <div class="loading">Carregando informações do perfil...</div>
+                </div>
+            </div>
         </div>
     </div>
 

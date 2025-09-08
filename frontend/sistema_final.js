@@ -1,21 +1,130 @@
 class SistemaEscolar {
     constructor() {
-        this.API_BASE = 'http://localhost:8000';
+        this.API_BASE = 'http://localhost:8001';
         this.alunos = [];
         this.turmas = [];
         this.matriculas = [];
+        this.currentUser = null;
+        this.token = null;
         this.init();
     }
 
     async init() {
         console.log('🚀 Iniciando Sistema Escolar...');
+        
+        // Verificar autenticação primeiro
+        if (!this.verificarAutenticacao()) {
+            window.location.href = 'login.html';
+            return;
+        }
+
+        await this.carregarUsuario();
+        
+        // Redirecionar usuários comuns para interface específica
+        if (this.currentUser && this.currentUser.tipo_usuario !== 'admin') {
+            console.log('👤 Usuário comum detectado, redirecionando...');
+            window.location.href = 'usuario.html';
+            return;
+        }
+
+        // Continuar apenas se for admin
         this.configurarEventos();
         await this.carregarDados();
         this.renderizar();
-        console.log('✅ Sistema inicializado!');
+        console.log('✅ Sistema Admin inicializado!');
+    }
+
+    verificarAutenticacao() {
+        this.token = localStorage.getItem('token');
+        const user = localStorage.getItem('user');
+        
+        if (!this.token || !user) {
+            return false;
+        }
+
+        try {
+            this.currentUser = JSON.parse(user);
+            return true;
+        } catch (error) {
+            console.error('Erro ao parsear dados do usuário:', error);
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            return false;
+        }
+    }
+
+    async carregarUsuario() {
+        try {
+            const response = await this.fazerRequisicao('/me');
+            if (response.ok) {
+                const userData = await response.json();
+                this.currentUser = userData;
+                localStorage.setItem('user', JSON.stringify(userData));
+                this.atualizarInterfaceUsuario();
+            } else {
+                throw new Error('Falha ao carregar dados do usuário');
+            }
+        } catch (error) {
+            console.error('Erro ao carregar usuário:', error);
+            this.logout();
+        }
+    }
+
+    atualizarInterfaceUsuario() {
+        const userWelcome = document.getElementById('userWelcome');
+        if (userWelcome && this.currentUser) {
+            const tipoUsuario = this.currentUser.tipo_usuario === 'admin' ? '👑 Admin' : '👤 Usuário';
+            userWelcome.textContent = `${tipoUsuario}: ${this.currentUser.username}`;
+        }
+
+        // Mostrar/ocultar botões baseado no tipo de usuário
+        const adminButtons = document.querySelectorAll('.admin-only');
+        adminButtons.forEach(btn => {
+            if (this.currentUser.tipo_usuario === 'admin') {
+                btn.style.display = '';
+            } else {
+                btn.style.display = 'none';
+            }
+        });
+    }
+
+    fazerRequisicao(endpoint, options = {}) {
+        const defaultOptions = {
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${this.token}`
+            }
+        };
+
+        return fetch(`${this.API_BASE}${endpoint}`, {
+            ...defaultOptions,
+            ...options,
+            headers: {
+                ...defaultOptions.headers,
+                ...options.headers
+            }
+        });
+    }
+
+    logout() {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        window.location.href = 'login.html';
     }
 
     configurarEventos() {
+        // Logout
+        document.getElementById('logoutBtn').addEventListener('click', () => {
+            if (confirm('Deseja realmente sair do sistema?')) {
+                this.logout();
+            }
+        });
+
+        // Perfil
+        document.getElementById('perfilBtn').addEventListener('click', () => {
+            this.abrirModalPerfil();
+        });
+
         // Tabs
         document.querySelectorAll('.tab-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
@@ -24,10 +133,14 @@ class SistemaEscolar {
             });
         });
 
-        // Botões principais
-        document.getElementById('newAlunoBtn').addEventListener('click', () => this.abrirModalAluno());
-        document.getElementById('newTurmaBtn').addEventListener('click', () => this.abrirModalTurma());
-        document.getElementById('newMatriculaBtn').addEventListener('click', () => this.abrirModalMatricula());
+        // Botões principais (apenas para admin)
+        const newAlunoBtn = document.getElementById('newAlunoBtn');
+        const newTurmaBtn = document.getElementById('newTurmaBtn');
+        const newMatriculaBtn = document.getElementById('newMatriculaBtn');
+
+        if (newAlunoBtn) newAlunoBtn.addEventListener('click', () => this.abrirModalAluno());
+        if (newTurmaBtn) newTurmaBtn.addEventListener('click', () => this.abrirModalTurma());
+        if (newMatriculaBtn) newMatriculaBtn.addEventListener('click', () => this.abrirModalMatricula());
 
         // Formulários
         document.getElementById('alunoForm').addEventListener('submit', (e) => {
@@ -120,15 +233,24 @@ class SistemaEscolar {
         try {
             console.log('📡 Carregando dados...');
             
-            const [alunosRes, turmasRes, matriculasRes] = await Promise.all([
-                fetch(`${this.API_BASE}/alunos`),
-                fetch(`${this.API_BASE}/turmas`),
-                fetch(`${this.API_BASE}/matriculas`)
+            const [alunosRes, turmasRes] = await Promise.all([
+                this.fazerRequisicao('/alunos'),
+                this.fazerRequisicao('/turmas')
             ]);
 
-            this.alunos = await alunosRes.json();
-            this.turmas = await turmasRes.json();
-            this.matriculas = await matriculasRes.json();
+            if (alunosRes.ok) {
+                this.alunos = await alunosRes.json();
+            } else {
+                console.error('Erro ao carregar alunos:', alunosRes.status);
+                this.alunos = [];
+            }
+
+            if (turmasRes.ok) {
+                this.turmas = await turmasRes.json();
+            } else {
+                console.error('Erro ao carregar turmas:', turmasRes.status);
+                this.turmas = [];
+            }
 
             console.log(`✅ Carregados: ${this.alunos.length} alunos, ${this.turmas.length} turmas`);
         } catch (error) {
@@ -159,14 +281,30 @@ class SistemaEscolar {
             return `
                 <div class="aluno-card">
                     <h3>${aluno.nome}</h3>
-                    <p><strong>Idade:</strong> ${idade} anos</p>
-                    <p><strong>Email:</strong> ${aluno.email}</p>
-                    <p><strong>Status:</strong> <span class="status ${aluno.status}">${aluno.status}</span></p>
-                    <p><strong>Turma:</strong> ${turma ? turma.nome : 'Sem turma'}</p>
-                    <div class="actions">
-                        <button onclick="sistema.editarAluno(${aluno.id})" class="btn-edit">Editar</button>
-                        <button onclick="sistema.excluirAluno(${aluno.id})" class="btn-delete">Excluir</button>
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <span class="label">🎂 Idade</span>
+                            <span class="value">${idade} anos</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="label">📧 Email</span>
+                            <span class="value">${aluno.email || 'Não informado'}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="label">📊 Status</span>
+                            <span class="value status ${aluno.status}">${aluno.status}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="label">🏫 Turma</span>
+                            <span class="value">${turma ? turma.nome : 'Sem turma'}</span>
+                        </div>
                     </div>
+                    ${this.currentUser.tipo_usuario === 'admin' ? `
+                        <div class="actions">
+                            <button onclick="sistema.editarAluno(${aluno.id})" class="btn-edit">✏️ Editar</button>
+                            <button onclick="sistema.excluirAluno(${aluno.id})" class="btn-delete">🗑️ Excluir</button>
+                        </div>
+                    ` : ''}
                 </div>
             `;
         }).join('');
@@ -354,16 +492,14 @@ class SistemaEscolar {
 
             if (alunoId) {
                 // Atualizar
-                response = await fetch(`${this.API_BASE}/alunos/${alunoId}`, {
+                response = await this.fazerRequisicao(`/alunos/${alunoId}`, {
                     method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(aluno)
                 });
             } else {
                 // Criar
-                response = await fetch(`${this.API_BASE}/alunos`, {
+                response = await this.fazerRequisicao('/alunos', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(aluno)
                 });
             }
@@ -411,16 +547,14 @@ class SistemaEscolar {
 
             if (turmaId) {
                 // Atualizar
-                response = await fetch(`${this.API_BASE}/turmas/${turmaId}`, {
+                response = await this.fazerRequisicao(`/turmas/${turmaId}`, {
                     method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(turma)
                 });
             } else {
                 // Criar
-                response = await fetch(`${this.API_BASE}/turmas`, {
+                response = await this.fazerRequisicao('/turmas', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(turma)
                 });
             }
@@ -562,6 +696,11 @@ class SistemaEscolar {
         const container = document.getElementById('alunosList');
         if (!container) return;
 
+        if (alunos.length === 0) {
+            container.innerHTML = '<p class="no-data">Nenhum aluno encontrado</p>';
+            return;
+        }
+
         container.innerHTML = alunos.map(aluno => {
             const turma = this.turmas.find(t => t.id === aluno.turma_id);
             const idade = this.calcularIdade(aluno.data_nascimento);
@@ -569,14 +708,30 @@ class SistemaEscolar {
             return `
                 <div class="aluno-card">
                     <h3>${aluno.nome}</h3>
-                    <p><strong>Idade:</strong> ${idade} anos</p>
-                    <p><strong>Email:</strong> ${aluno.email}</p>
-                    <p><strong>Status:</strong> <span class="status ${aluno.status}">${aluno.status}</span></p>
-                    <p><strong>Turma:</strong> ${turma ? turma.nome : 'Sem turma'}</p>
-                    <div class="actions">
-                        <button onclick="sistema.editarAluno(${aluno.id})" class="btn-edit">Editar</button>
-                        <button onclick="sistema.excluirAluno(${aluno.id})" class="btn-delete">Excluir</button>
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <span class="label">🎂 Idade</span>
+                            <span class="value">${idade} anos</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="label">📧 Email</span>
+                            <span class="value">${aluno.email || 'Não informado'}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="label">📊 Status</span>
+                            <span class="value status ${aluno.status}">${aluno.status}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="label">🏫 Turma</span>
+                            <span class="value">${turma ? turma.nome : 'Sem turma'}</span>
+                        </div>
                     </div>
+                    ${this.currentUser.tipo_usuario === 'admin' ? `
+                        <div class="actions">
+                            <button onclick="sistema.editarAluno(${aluno.id})" class="btn-edit">✏️ Editar</button>
+                            <button onclick="sistema.excluirAluno(${aluno.id})" class="btn-delete">🗑️ Excluir</button>
+                        </div>
+                    ` : ''}
                 </div>
             `;
         }).join('');
@@ -662,6 +817,90 @@ class SistemaEscolar {
         }, 3000);
 
         console.log(`🔔 ${type.toUpperCase()}: ${message}`);
+    }
+
+    // MODAL DE PERFIL
+    async abrirModalPerfil() {
+        const modal = document.getElementById('modalPerfil');
+        const content = document.getElementById('perfilContent');
+        
+        modal.style.display = 'block';
+        content.innerHTML = '<div class="loading">🔄 Carregando informações do perfil...</div>';
+
+        try {
+            const response = await this.fazerRequisicao('/perfil');
+            
+            if (response.ok) {
+                const perfil = await response.json();
+                this.renderizarPerfil(perfil);
+            } else {
+                content.innerHTML = '<div class="error">❌ Erro ao carregar perfil</div>';
+            }
+        } catch (error) {
+            console.error('Erro ao carregar perfil:', error);
+            content.innerHTML = '<div class="error">❌ Erro de conexão</div>';
+        }
+    }
+
+    renderizarPerfil(perfil) {
+        const content = document.getElementById('perfilContent');
+        const tipoUsuarioIcon = perfil.tipo_usuario === 'admin' ? '👑' : '👤';
+        const tipoUsuarioText = perfil.tipo_usuario === 'admin' ? 'Administrador' : 'Usuário';
+        
+        content.innerHTML = `
+            <div class="perfil-header">
+                <div class="perfil-avatar">
+                    ${tipoUsuarioIcon}
+                </div>
+                <div class="perfil-info">
+                    <h3>${perfil.username}</h3>
+                    <div class="tipo-usuario">${tipoUsuarioText}</div>
+                </div>
+            </div>
+
+            <div class="perfil-stats">
+                <div class="stat-card-perfil">
+                    <div class="icon">👥</div>
+                    <div class="number">${perfil.total_alunos_cadastrados}</div>
+                    <div class="label">Alunos no Sistema</div>
+                </div>
+                <div class="stat-card-perfil">
+                    <div class="icon">📋</div>
+                    <div class="number">${perfil.total_matriculas_realizadas}</div>
+                    <div class="label">Matrículas Realizadas</div>
+                </div>
+                <div class="stat-card-perfil">
+                    <div class="icon">⏱️</div>
+                    <div class="number">${perfil.tempo_login_atual}</div>
+                    <div class="label">Tempo da Sessão</div>
+                </div>
+                <div class="stat-card-perfil">
+                    <div class="icon">🔐</div>
+                    <div class="number">${perfil.sessoes_ativas}</div>
+                    <div class="label">Sessões Ativas</div>
+                </div>
+            </div>
+
+            <div class="perfil-detalhes">
+                <h4>📊 Detalhes da Conta</h4>
+                <div class="detalhe-item">
+                    <span class="detalhe-label">📧 Email:</span>
+                    <span class="detalhe-valor">${perfil.email}</span>
+                </div>
+                <div class="detalhe-item">
+                    <span class="detalhe-label">📅 Conta criada em:</span>
+                    <span class="detalhe-valor">${perfil.data_criacao}</span>
+                </div>
+                <div class="detalhe-item">
+                    <span class="detalhe-label">🕐 Último login:</span>
+                    <span class="detalhe-valor">${perfil.ultimo_login}</span>
+                </div>
+                <div class="detalhe-item">
+                    <span class="detalhe-label">🆔 ID do usuário:</span>
+                    <span class="detalhe-valor">#${perfil.id}</span>
+                </div>
+            </div>
+        `;
     }
 }
 
