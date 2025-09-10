@@ -107,6 +107,28 @@
                     <button 
                         type="button" 
                         class="tab-btn" 
+                        data-tab="professores"
+                        role="tab"
+                        aria-selected="false"
+                        aria-controls="professores-panel"
+                        id="tab-professores"
+                    >
+                        Professores
+                    </button>
+                    <button 
+                        type="button" 
+                        class="tab-btn" 
+                        data-tab="solicitacoes"
+                        role="tab"
+                        aria-selected="false"
+                        aria-controls="solicitacoes-panel"
+                        id="tab-solicitacoes"
+                    >
+                        Solicitações
+                    </button>
+                    <button 
+                        type="button" 
+                        class="tab-btn" 
                         data-tab="relatorios"
                         role="tab"
                         aria-selected="false"
@@ -123,6 +145,9 @@
                     </button>
                     <button type="button" id="newTurmaBtn" class="btn btn-primary admin-only" aria-label="Adicionar nova turma" style="display: none;">
                         + Nova Turma
+                    </button>
+                    <button type="button" id="newProfessorBtn" class="btn btn-primary admin-only" aria-label="Adicionar novo professor" style="display: none;">
+                        + Novo Professor
                     </button>
                     <button type="button" id="newMatriculaBtn" class="btn btn-accent admin-only" aria-label="Nova matrícula" style="display: none;">
                         + Nova Matrícula
@@ -153,6 +178,20 @@
             <div id="turmas-panel" class="tab-content" role="tabpanel" aria-labelledby="tab-turmas">
                 <div id="turmasList" class="data-grid" aria-live="polite" aria-label="Lista de turmas">
                     <!-- Turmas serão carregadas via JavaScript -->
+                </div>
+            </div>
+
+            <!-- Professores Panel -->
+            <div id="professores-panel" class="tab-content" role="tabpanel" aria-labelledby="tab-professores">
+                <div id="professoresList" class="data-grid" aria-live="polite" aria-label="Lista de professores">
+                    <!-- Professores serão carregados via JavaScript -->
+                </div>
+            </div>
+
+            <!-- Solicitações Panel -->
+            <div id="solicitacoes-panel" class="tab-content" role="tabpanel" aria-labelledby="tab-solicitacoes">
+                <div id="solicitacoesList" class="data-grid" aria-live="polite" aria-label="Lista de solicitações de matrícula">
+                    <!-- Solicitações serão carregadas via JavaScript -->
                 </div>
             </div>
 
@@ -320,6 +359,80 @@
                 <div class="modal-actions">
                     <button type="button" class="btn btn-secondary" id="cancelMatriculaBtn">Cancelar</button>
                     <button type="submit" class="btn btn-primary">Matricular</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Novo Professor -->
+    <div id="modalProfessor" class="modal" role="dialog" aria-labelledby="modalProfessorTitle" aria-hidden="true">
+        <div class="modal-content">
+            <header class="modal-header">
+                <h2 id="modalProfessorTitle">Novo Professor</h2>
+                <button type="button" class="close-btn" aria-label="Fechar modal">×</button>
+            </header>
+            <form id="professorForm" class="modal-body">
+                <div class="form-group">
+                    <label for="professorNome">Nome Completo *</label>
+                    <input 
+                        type="text" 
+                        id="professorNome" 
+                        name="nome" 
+                        required 
+                        minlength="3" 
+                        maxlength="100"
+                        aria-describedby="professorNomeHelp"
+                    >
+                    <small id="professorNomeHelp" class="form-help">Nome completo do professor</small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="professorEmail">Email *</label>
+                    <input 
+                        type="email" 
+                        id="professorEmail" 
+                        name="email" 
+                        required
+                        aria-describedby="professorEmailHelp"
+                    >
+                    <small id="professorEmailHelp" class="form-help">Email institucional do professor</small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="professorEspecialidade">Especialidade *</label>
+                    <input 
+                        type="text" 
+                        id="professorEspecialidade" 
+                        name="especialidade" 
+                        required
+                        aria-describedby="professorEspecialidadeHelp"
+                    >
+                    <small id="professorEspecialidadeHelp" class="form-help">Ex: Matemática, Português, História</small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="professorTelefone">Telefone</label>
+                    <input 
+                        type="tel" 
+                        id="professorTelefone" 
+                        name="telefone"
+                        aria-describedby="professorTelefoneHelp"
+                    >
+                    <small id="professorTelefoneHelp" class="form-help">Telefone de contato (opcional)</small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="professorStatus">Status *</label>
+                    <select id="professorStatus" name="status" required>
+                        <option value="ativo">Ativo</option>
+                        <option value="inativo">Inativo</option>
+                        <option value="licenca">Em Licença</option>
+                    </select>
+                </div>
+                
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" id="cancelProfessorBtn">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Salvar</button>
                 </div>
             </form>
         </div>

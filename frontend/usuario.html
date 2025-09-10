@@ -204,7 +204,10 @@
         <section class="alunos-section">
             <div class="section-title">
                 <span style="font-size: 2rem;">👨‍🎓</span>
-                <h2>Lista de Alunos</h2>
+                <h2>Meus Alunos</h2>
+                <button type="button" id="solicitarMatriculaBtn" class="btn btn-primary" style="margin-left: auto; padding: 0.8rem 1.5rem; background: #667eea; color: white; border: none; border-radius: 10px; font-weight: 500; cursor: pointer; transition: all 0.3s ease;">
+                    ➕ Solicitar Matrícula
+                </button>
             </div>
 
             <!-- Filtros de Busca -->
@@ -225,6 +228,18 @@
                 <!-- Alunos serão carregados via JavaScript -->
             </div>
         </section>
+
+        <!-- Seção de Solicitações -->
+        <section class="alunos-section" style="margin-top: 2rem;">
+            <div class="section-title">
+                <span style="font-size: 2rem;">📋</span>
+                <h2>Minhas Solicitações de Matrícula</h2>
+            </div>
+
+            <div id="solicitacoesList" class="data-grid">
+                <!-- Solicitações serão carregadas via JavaScript -->
+            </div>
+        </section>
     </main>
 
     <!-- Modal Meu Perfil -->
@@ -242,6 +257,60 @@
         </div>
     </div>
 
+    <!-- Modal Solicitar Matrícula -->
+    <div id="modalSolicitacao" class="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;">
+        <div class="modal-content" style="background: white; border-radius: 20px; width: 90%; max-width: 600px; max-height: 90vh; overflow-y: auto;">
+            <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; padding: 1.5rem; border-bottom: 1px solid #e9ecef;">
+                <h2 style="margin: 0; color: #667eea;">📝 Solicitar Matrícula</h2>
+                <button type="button" class="close-btn" onclick="fecharModalSolicitacao()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #6c757d; padding: 0.5rem; border-radius: 4px;">×</button>
+            </div>
+            <form id="solicitacaoForm" class="modal-body" style="padding: 1.5rem;">
+                <div class="form-group" style="margin-bottom: 1rem;">
+                    <label for="nomeAluno" style="display: block; margin-bottom: 0.5rem; font-weight: 500; color: #333;">Nome do Aluno *</label>
+                    <input type="text" id="nomeAluno" name="nome_aluno" required style="width: 100%; padding: 0.75rem; border: 2px solid #e1e5e9; border-radius: 8px; font-size: 1rem;" placeholder="Digite o nome completo do aluno">
+                </div>
+
+                <div class="form-group" style="margin-bottom: 1rem;">
+                    <label for="dataNascimento" style="display: block; margin-bottom: 0.5rem; font-weight: 500; color: #333;">Data de Nascimento *</label>
+                    <input type="date" id="dataNascimento" name="data_nascimento" required style="width: 100%; padding: 0.75rem; border: 2px solid #e1e5e9; border-radius: 8px; font-size: 1rem;">
+                </div>
+
+                <div class="form-group" style="margin-bottom: 1rem;">
+                    <label for="emailAluno" style="display: block; margin-bottom: 0.5rem; font-weight: 500; color: #333;">Email do Aluno (opcional)</label>
+                    <input type="email" id="emailAluno" name="email_aluno" style="width: 100%; padding: 0.75rem; border: 2px solid #e1e5e9; border-radius: 8px; font-size: 1rem;" placeholder="aluno@email.com">
+                </div>
+
+                <div class="form-group" style="margin-bottom: 1rem;">
+                    <label for="turmaSolicitada" style="display: block; margin-bottom: 0.5rem; font-weight: 500; color: #333;">Turma Desejada (opcional)</label>
+                    <select id="turmaSolicitada" name="turma_solicitada" style="width: 100%; padding: 0.75rem; border: 2px solid #e1e5e9; border-radius: 8px; font-size: 1rem;">
+                        <option value="">Selecione uma turma (opcional)</option>
+                    </select>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 1.5rem;">
+                    <label for="observacoes" style="display: block; margin-bottom: 0.5rem; font-weight: 500; color: #333;">Observações (opcional)</label>
+                    <textarea id="observacoes" name="observacoes" rows="3" style="width: 100%; padding: 0.75rem; border: 2px solid #e1e5e9; border-radius: 8px; font-size: 1rem; resize: vertical;" placeholder="Informações adicionais sobre a solicitação..."></textarea>
+                </div>
+
+                <div class="modal-actions" style="display: flex; gap: 1rem; justify-content: flex-end;">
+                    <button type="button" onclick="fecharModalSolicitacao()" class="btn btn-secondary" style="padding: 0.75rem 1.5rem; background: #6c757d; color: white; border: none; border-radius: 8px; cursor: pointer;">Cancelar</button>
+                    <button type="submit" class="btn btn-primary" style="padding: 0.75rem 1.5rem; background: #667eea; color: white; border: none; border-radius: 8px; cursor: pointer;">Enviar Solicitação</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script src="usuario.js"></script>
+    <script>
+        // Sobrescrever API_BASE se necessário
+        window.API_BASE = 'http://localhost:8002';
+        
+        // Inicializar quando a página carregar
+        document.addEventListener('DOMContentLoaded', () => {
+            if (window.UsuarioSystem) {
+                const sistema = new UsuarioSystem();
+            }
+        });
+    </script>
 </body>
 </html>

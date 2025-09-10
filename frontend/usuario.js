@@ -1,8 +1,9 @@
 class PortalUsuario {
     constructor() {
-        this.API_BASE = 'http://localhost:8001';
+        this.API_BASE = window.API_BASE || 'http://localhost:8002';
         this.alunos = [];
         this.turmas = [];
+        this.solicitacoes = [];
         this.currentUser = null;
         this.token = null;
         this.init();
@@ -104,6 +105,11 @@ class PortalUsuario {
             this.abrirModalPerfil();
         });
 
+        // Solicitar Matrícula
+        document.getElementById('solicitarMatriculaBtn').addEventListener('click', () => {
+            this.abrirModalSolicitacao();
+        });
+
         // Fechar modal de perfil
         const closeBtn = document.querySelector('#modalPerfil .close-btn');
         if (closeBtn) {
@@ -142,9 +148,13 @@ class PortalUsuario {
         try {
             console.log('📡 Carregando dados...');
             
-            const [alunosRes, turmasRes] = await Promise.all([
-                this.fazerRequisicao('/alunos'),
-                this.fazerRequisicao('/turmas')
+            // Para usuários comuns, carregar apenas seus alunos
+            const alunosEndpoint = this.currentUser.tipo_usuario === 'admin' ? '/alunos' : '/meus-alunos';
+            
+            const [alunosRes, turmasRes, solicitacoesRes] = await Promise.all([
+                this.fazerRequisicao(alunosEndpoint),
+                this.fazerRequisicao('/turmas'),
+                this.fazerRequisicao('/solicitacoes-matricula')
             ]);
 
             if (alunosRes.ok) {
@@ -161,7 +171,14 @@ class PortalUsuario {
                 this.turmas = [];
             }
 
-            console.log(`✅ Carregados: ${this.alunos.length} alunos, ${this.turmas.length} turmas`);
+            if (solicitacoesRes.ok) {
+                this.solicitacoes = await solicitacoesRes.json();
+            } else {
+                console.error('Erro ao carregar solicitações:', solicitacoesRes.status);
+                this.solicitacoes = [];
+            }
+
+            console.log(`✅ Carregados: ${this.alunos.length} alunos, ${this.turmas.length} turmas, ${this.solicitacoes.length} solicitações`);
         } catch (error) {
             console.error('❌ Erro ao carregar dados:', error);
             this.showToast('Erro ao carregar dados', 'error');
@@ -170,6 +187,7 @@ class PortalUsuario {
 
     renderizar() {
         this.renderizarAlunos();
+        this.renderizarSolicitacoes();
         this.atualizarEstatisticas();
         this.atualizarFiltros();
     }
@@ -443,6 +461,155 @@ class PortalUsuario {
             </div>
         `;
     }
+
+    // ==================== FUNÇÕES DE SOLICITAÇÕES DE MATRÍCULA ====================
+
+    renderizarSolicitacoes() {
+        const container = document.getElementById('solicitacoesList');
+        if (!container) return;
+
+        if (this.solicitacoes.length === 0) {
+            container.innerHTML = `
+                <div style="text-align: center; padding: 3rem; color: #666;">
+                    <div style="font-size: 4rem; margin-bottom: 1rem; opacity: 0.5;">📝</div>
+                    <h3>Nenhuma solicitação de matrícula</h3>
+                    <p>Você ainda não fez nenhuma solicitação de matrícula.</p>
+                </div>
+            `;
+            return;
+        }
+
+        container.innerHTML = this.solicitacoes.map(solicitacao => {
+            const statusIcon = {
+                'pendente': '⏳',
+                'aprovada': '✅',
+                'rejeitada': '❌'
+            }[solicitacao.status] || '❓';
+
+            const statusColor = {
+                'pendente': '#ffa500',
+                'aprovada': '#28a745',
+                'rejeitada': '#dc3545'
+            }[solicitacao.status] || '#6c757d';
+
+            return `
+                <div style="background: white; border-radius: 15px; padding: 1.5rem; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1); margin-bottom: 1rem; border-left: 4px solid ${statusColor};">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
+                        <div>
+                            <h3 style="margin: 0 0 0.5rem 0; color: #333; display: flex; align-items: center; gap: 0.5rem;">
+                                ${statusIcon} ${solicitacao.nome_aluno}
+                            </h3>
+                            <p style="margin: 0; color: #666; font-size: 0.9rem;">
+                                Solicitado em: ${new Date(solicitacao.data_solicitacao).toLocaleDateString('pt-BR')}
+                            </p>
+                        </div>
+                        <span style="background: ${statusColor}; color: white; padding: 0.3rem 0.8rem; border-radius: 15px; font-size: 0.8rem; font-weight: 500; text-transform: uppercase;">
+                            ${solicitacao.status}
+                        </span>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
+                        <div>
+                            <strong style="color: #495057;">📅 Data de Nascimento:</strong><br>
+                            <span style="color: #667eea;">${new Date(solicitacao.data_nascimento).toLocaleDateString('pt-BR')}</span>
+                        </div>
+                        ${solicitacao.email_aluno ? `
+                            <div>
+                                <strong style="color: #495057;">📧 Email:</strong><br>
+                                <span style="color: #667eea;">${solicitacao.email_aluno}</span>
+                            </div>
+                        ` : ''}
+                        ${solicitacao.turma_solicitada ? `
+                            <div>
+                                <strong style="color: #495057;">🏫 Turma Solicitada:</strong><br>
+                                <span style="color: #667eea;">${solicitacao.turma_solicitada}</span>
+                            </div>
+                        ` : ''}
+                    </div>
+
+                    ${solicitacao.observacoes ? `
+                        <div style="margin-bottom: 1rem;">
+                            <strong style="color: #495057;">📝 Observações:</strong><br>
+                            <span style="color: #666;">${solicitacao.observacoes}</span>
+                        </div>
+                    ` : ''}
+
+                    ${solicitacao.resposta_admin ? `
+                        <div style="background: #f8f9fa; border-radius: 10px; padding: 1rem; margin-top: 1rem; border-left: 3px solid ${statusColor};">
+                            <strong style="color: #495057;">💬 Resposta do Administrador:</strong><br>
+                            <span style="color: #333;">${solicitacao.resposta_admin}</span>
+                            ${solicitacao.data_resposta ? `
+                                <br><small style="color: #666;">Respondido em: ${new Date(solicitacao.data_resposta).toLocaleDateString('pt-BR')}</small>
+                            ` : ''}
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+        }).join('');
+    }
+
+    abrirModalSolicitacao() {
+        const modal = document.getElementById('modalSolicitacao');
+        const form = document.getElementById('solicitacaoForm');
+        
+        // Resetar formulário
+        form.reset();
+        
+        // Preencher select de turmas
+        const selectTurma = document.getElementById('turmaSolicitada');
+        selectTurma.innerHTML = '<option value="">Selecione uma turma (opcional)</option>';
+        this.turmas.forEach(turma => {
+            selectTurma.innerHTML += `<option value="${turma.nome}">${turma.nome}</option>`;
+        });
+
+        // Configurar evento de submit
+        form.onsubmit = (e) => this.enviarSolicitacao(e);
+        
+        modal.style.display = 'flex';
+    }
+
+    async enviarSolicitacao(e) {
+        e.preventDefault();
+        
+        const formData = new FormData(e.target);
+        const solicitacao = {
+            nome_aluno: formData.get('nome_aluno'),
+            data_nascimento: formData.get('data_nascimento'),
+            email_aluno: formData.get('email_aluno') || null,
+            turma_solicitada: formData.get('turma_solicitada') || null,
+            observacoes: formData.get('observacoes') || null
+        };
+
+        try {
+            const response = await this.fazerRequisicao('/solicitacoes-matricula', {
+                method: 'POST',
+                body: JSON.stringify(solicitacao)
+            });
+
+            if (response.ok) {
+                const result = await response.json();
+                alert('✅ ' + result.message);
+                this.fecharModalSolicitacao();
+                await this.carregarDados();
+                this.renderizar();
+            } else {
+                const error = await response.json();
+                alert('❌ Erro: ' + error.detail);
+            }
+        } catch (error) {
+            console.error('Erro ao enviar solicitação:', error);
+            alert('❌ Erro ao conectar com o servidor');
+        }
+    }
+
+    fecharModalSolicitacao() {
+        document.getElementById('modalSolicitacao').style.display = 'none';
+    }
+}
+
+// Funções globais para os botões
+function fecharModalSolicitacao() {
+    document.getElementById('modalSolicitacao').style.display = 'none';
 }
 
 // Inicializar portal

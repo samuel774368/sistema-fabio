@@ -1,9 +1,11 @@
 class SistemaEscolar {
     constructor() {
-        this.API_BASE = 'http://localhost:8001';
+        this.API_BASE = 'http://localhost:8002';
         this.alunos = [];
         this.turmas = [];
         this.matriculas = [];
+        this.professores = [];
+        this.solicitacoes = [];
         this.currentUser = null;
         this.token = null;
         this.init();
@@ -118,6 +120,7 @@ class SistemaEscolar {
             if (confirm('Deseja realmente sair do sistema?')) {
                 this.logout();
             }
+            
         });
 
         // Perfil
@@ -136,10 +139,12 @@ class SistemaEscolar {
         // Botões principais (apenas para admin)
         const newAlunoBtn = document.getElementById('newAlunoBtn');
         const newTurmaBtn = document.getElementById('newTurmaBtn');
+        const newProfessorBtn = document.getElementById('newProfessorBtn');
         const newMatriculaBtn = document.getElementById('newMatriculaBtn');
 
         if (newAlunoBtn) newAlunoBtn.addEventListener('click', () => this.abrirModalAluno());
         if (newTurmaBtn) newTurmaBtn.addEventListener('click', () => this.abrirModalTurma());
+        if (newProfessorBtn) newProfessorBtn.addEventListener('click', () => this.abrirModalProfessor());
         if (newMatriculaBtn) newMatriculaBtn.addEventListener('click', () => this.abrirModalMatricula());
 
         // Formulários
@@ -151,6 +156,11 @@ class SistemaEscolar {
         document.getElementById('turmaForm').addEventListener('submit', (e) => {
             e.preventDefault();
             this.salvarTurma();
+        });
+
+        document.getElementById('professorForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            this.salvarProfessor();
         });
 
         document.getElementById('matriculaForm').addEventListener('submit', (e) => {
@@ -209,21 +219,41 @@ class SistemaEscolar {
         // Ativar tab selecionada
         document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
         
+        // Mostrar painel correto
         if (tabName === 'relatorios') {
             document.getElementById('relatorios-panel').classList.add('active');
         } else if (tabName === 'turmas') {
             document.getElementById('turmas-panel').classList.add('active');
         } else if (tabName === 'alunos') {
             document.getElementById('alunos-panel').classList.add('active');
-        } else {
-            document.getElementById(tabName).classList.add('active');
+        } else if (tabName === 'professores') {
+            document.getElementById('professores-panel').classList.add('active');
+        } else if (tabName === 'solicitacoes') {
+            document.getElementById('solicitacoes-panel').classList.add('active');
         }
+
+        // Mostrar/ocultar botões baseado na tab ativa
+        const buttons = {
+            'newAlunoBtn': tabName === 'alunos',
+            'newTurmaBtn': tabName === 'turmas',
+            'newProfessorBtn': tabName === 'professores',
+            'newMatriculaBtn': tabName === 'alunos' // Matrícula na aba de alunos
+        };
+
+        Object.keys(buttons).forEach(btnId => {
+            const btn = document.getElementById(btnId);
+            if (btn) {
+                btn.style.display = buttons[btnId] ? 'inline-block' : 'none';
+            }
+        });
 
         // Renderizar conteúdo específico
         if (tabName === 'alunos') {
             this.renderizarAlunos();
         } else if (tabName === 'turmas') {
             this.renderizarTurmas();
+        } else if (tabName === 'professores') {
+            this.renderizarProfessores();
         } else if (tabName === 'relatorios') {
             this.renderizarRelatorios();
         }
@@ -233,9 +263,11 @@ class SistemaEscolar {
         try {
             console.log('📡 Carregando dados...');
             
-            const [alunosRes, turmasRes] = await Promise.all([
+            const [alunosRes, turmasRes, professoresRes, solicitacoesRes] = await Promise.all([
                 this.fazerRequisicao('/alunos'),
-                this.fazerRequisicao('/turmas')
+                this.fazerRequisicao('/turmas'),
+                this.fazerRequisicao('/professores'),
+                this.fazerRequisicao('/solicitacoes-matricula')
             ]);
 
             if (alunosRes.ok) {
@@ -252,7 +284,21 @@ class SistemaEscolar {
                 this.turmas = [];
             }
 
-            console.log(`✅ Carregados: ${this.alunos.length} alunos, ${this.turmas.length} turmas`);
+            if (professoresRes.ok) {
+                this.professores = await professoresRes.json();
+            } else {
+                console.error('Erro ao carregar professores:', professoresRes.status);
+                this.professores = [];
+            }
+
+            if (solicitacoesRes.ok) {
+                this.solicitacoes = await solicitacoesRes.json();
+            } else {
+                console.error('Erro ao carregar solicitações:', solicitacoesRes.status);
+                this.solicitacoes = [];
+            }
+
+            console.log(`✅ Carregados: ${this.alunos.length} alunos, ${this.turmas.length} turmas, ${this.professores.length} professores, ${this.solicitacoes.length} solicitações`);
         } catch (error) {
             console.error('❌ Erro ao carregar dados:', error);
             this.showToast('Erro ao carregar dados', 'error');
@@ -261,6 +307,9 @@ class SistemaEscolar {
 
     renderizar() {
         this.renderizarAlunos();
+        this.renderizarTurmas();
+        this.renderizarProfessores();
+        this.renderizarSolicitacoes();
         this.atualizarEstatisticas();
         this.atualizarFiltros();
     }
@@ -335,6 +384,138 @@ class SistemaEscolar {
                         <button onclick="sistema.editarTurma(${turma.id})" class="btn-edit">Editar</button>
                         <button onclick="sistema.excluirTurma(${turma.id})" class="btn-delete">Excluir</button>
                     </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    renderizarProfessores() {
+        const container = document.getElementById('professoresList');
+        console.log('👨‍🏫 renderizarProfessores - container:', container);
+        console.log('👨‍🏫 renderizarProfessores - professores:', this.professores);
+        
+        if (!container) return;
+
+        if (this.professores.length === 0) {
+            container.innerHTML = '<p class="no-data">Nenhum professor cadastrado</p>';
+            return;
+        }
+
+        container.innerHTML = this.professores.map(professor => {
+            const statusClass = professor.status === 'ativo' ? 'status-ativo' : 'status-inativo';
+            
+            return `
+                <div class="professor-card">
+                    <h3>👨‍🏫 ${professor.nome}</h3>
+                    <p><strong>Email:</strong> ${professor.email}</p>
+                    <p><strong>Especialidade:</strong> ${professor.especialidade}</p>
+                    <p><strong>Telefone:</strong> ${professor.telefone || 'Não informado'}</p>
+                    <p><strong>Status:</strong> <span class="status-badge ${statusClass}">${professor.status}</span></p>
+                    <div class="actions">
+                        <button onclick="sistema.editarProfessor(${professor.id})" class="btn-edit">Editar</button>
+                        <button onclick="sistema.excluirProfessor(${professor.id})" class="btn-delete">Excluir</button>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    renderizarSolicitacoes() {
+        const container = document.getElementById('solicitacoesList');
+        console.log('📝 renderizarSolicitacoes - container:', container);
+        console.log('📝 renderizarSolicitacoes - solicitacoes:', this.solicitacoes);
+        
+        if (!container) return;
+
+        if (this.solicitacoes.length === 0) {
+            container.innerHTML = '<p class="no-data">Nenhuma solicitação de matrícula</p>';
+            return;
+        }
+
+        container.innerHTML = this.solicitacoes.map(solicitacao => {
+            const statusIcon = {
+                'pendente': '⏳',
+                'aprovada': '✅',
+                'rejeitada': '❌'
+            }[solicitacao.status] || '❓';
+
+            const statusColor = {
+                'pendente': '#ffa500',
+                'aprovada': '#28a745',
+                'rejeitada': '#dc3545'
+            }[solicitacao.status] || '#6c757d';
+
+            const isPendente = solicitacao.status === 'pendente';
+            
+            return `
+                <div class="solicitacao-card" style="background: white; border-radius: 15px; padding: 1.5rem; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1); margin-bottom: 1rem; border-left: 4px solid ${statusColor};">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
+                        <div>
+                            <h3 style="margin: 0 0 0.5rem 0; color: #333; display: flex; align-items: center; gap: 0.5rem;">
+                                ${statusIcon} ${solicitacao.nome_aluno}
+                            </h3>
+                            <p style="margin: 0; color: #666; font-size: 0.9rem;">
+                                <strong>Solicitante:</strong> ${solicitacao.username} (${solicitacao.email_usuario})
+                            </p>
+                            <p style="margin: 0; color: #666; font-size: 0.9rem;">
+                                <strong>Data:</strong> ${new Date(solicitacao.data_solicitacao).toLocaleDateString('pt-BR')}
+                            </p>
+                        </div>
+                        <span style="background: ${statusColor}; color: white; padding: 0.3rem 0.8rem; border-radius: 15px; font-size: 0.8rem; font-weight: 500; text-transform: uppercase;">
+                            ${solicitacao.status}
+                        </span>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
+                        <div>
+                            <strong style="color: #495057;">📅 Data de Nascimento:</strong><br>
+                            <span style="color: #667eea;">${new Date(solicitacao.data_nascimento).toLocaleDateString('pt-BR')}</span>
+                        </div>
+                        ${solicitacao.email_aluno ? `
+                            <div>
+                                <strong style="color: #495057;">📧 Email:</strong><br>
+                                <span style="color: #667eea;">${solicitacao.email_aluno}</span>
+                            </div>
+                        ` : ''}
+                        ${solicitacao.turma_solicitada ? `
+                            <div>
+                                <strong style="color: #495057;">🏫 Turma Solicitada:</strong><br>
+                                <span style="color: #667eea;">${solicitacao.turma_solicitada}</span>
+                            </div>
+                        ` : ''}
+                    </div>
+
+                    ${solicitacao.observacoes ? `
+                        <div style="margin-bottom: 1rem;">
+                            <strong style="color: #495057;">📝 Observações:</strong><br>
+                            <span style="color: #666;">${solicitacao.observacoes}</span>
+                        </div>
+                    ` : ''}
+
+                    ${isPendente ? `
+                        <div style="display: flex; gap: 1rem; margin-top: 1rem;">
+                            <select id="turma-${solicitacao.id}" style="flex: 1; padding: 0.5rem; border: 2px solid #e1e5e9; border-radius: 8px;">
+                                <option value="">Selecionar turma</option>
+                                ${this.turmas.map(turma => `<option value="${turma.id}">${turma.nome}</option>`).join('')}
+                            </select>
+                            <button onclick="sistema.aprovarSolicitacao(${solicitacao.id})" class="btn btn-success" style="background: #28a745; color: white; border: none; padding: 0.5rem 1rem; border-radius: 8px; cursor: pointer;">
+                                ✅ Aprovar
+                            </button>
+                            <button onclick="sistema.rejeitarSolicitacao(${solicitacao.id})" class="btn btn-danger" style="background: #dc3545; color: white; border: none; padding: 0.5rem 1rem; border-radius: 8px; cursor: pointer;">
+                                ❌ Rejeitar
+                            </button>
+                        </div>
+                    ` : ''}
+
+                    ${solicitacao.resposta_admin ? `
+                        <div style="background: #f8f9fa; border-radius: 10px; padding: 1rem; margin-top: 1rem; border-left: 3px solid ${statusColor};">
+                            <strong style="color: #495057;">💬 Resposta:</strong><br>
+                            <span style="color: #333;">${solicitacao.resposta_admin}</span>
+                            ${solicitacao.data_resposta ? `
+                                <br><small style="color: #666;">Respondido em: ${new Date(solicitacao.data_resposta).toLocaleDateString('pt-BR')}</small>
+                            ` : ''}
+                        </div>
+                    ` : ''}
                 </div>
             `;
         }).join('');
@@ -453,6 +634,30 @@ class SistemaEscolar {
         this.turmas.forEach(turma => {
             selectTurma.innerHTML += `<option value="${turma.id}">${turma.nome}</option>`;
         });
+
+        modal.style.display = 'block';
+    }
+
+    // MODAL PROFESSOR
+    abrirModalProfessor(professor = null) {
+        const modal = document.getElementById('modalProfessor');
+        const form = document.getElementById('professorForm');
+        const title = document.getElementById('modalProfessorTitle');
+
+        form.reset();
+        
+        if (professor) {
+            title.textContent = 'Editar Professor';
+            form.dataset.professorId = professor.id;
+            form.nome.value = professor.nome;
+            form.email.value = professor.email;
+            form.especialidade.value = professor.especialidade;
+            form.telefone.value = professor.telefone || '';
+            form.status.value = professor.status;
+        } else {
+            title.textContent = 'Novo Professor';
+            delete form.dataset.professorId;
+        }
 
         modal.style.display = 'block';
     }
@@ -618,6 +823,69 @@ class SistemaEscolar {
         }
     }
 
+    // SALVAR PROFESSOR
+    async salvarProfessor() {
+        const form = document.getElementById('professorForm');
+        const formData = new FormData(form);
+
+        const professor = {
+            nome: formData.get('nome'),
+            email: formData.get('email'),
+            especialidade: formData.get('especialidade'),
+            telefone: formData.get('telefone'),
+            status: formData.get('status')
+        };
+
+        console.log('💾 Salvando professor:', professor);
+
+        if (!professor.nome.trim()) {
+            this.showToast('Nome é obrigatório', 'error');
+            return;
+        }
+
+        if (!professor.email.trim()) {
+            this.showToast('Email é obrigatório', 'error');
+            return;
+        }
+
+        if (!professor.especialidade.trim()) {
+            this.showToast('Especialidade é obrigatória', 'error');
+            return;
+        }
+
+        try {
+            const professorId = form.dataset.professorId;
+            let response;
+
+            if (professorId) {
+                // Atualizar
+                response = await this.fazerRequisicao(`/professores/${professorId}`, {
+                    method: 'PUT',
+                    body: JSON.stringify(professor)
+                });
+            } else {
+                // Criar
+                response = await this.fazerRequisicao('/professores', {
+                    method: 'POST',
+                    body: JSON.stringify(professor)
+                });
+            }
+
+            if (response.ok) {
+                this.showToast(professorId ? 'Professor atualizado!' : 'Professor cadastrado!', 'success');
+                this.fecharModal('modalProfessor');
+                await this.carregarDados();
+                this.renderizar();
+            } else {
+                const error = await response.json();
+                this.showToast('Erro: ' + error.detail, 'error');
+            }
+        } catch (error) {
+            console.error('❌ Erro ao salvar professor:', error);
+            this.showToast('Erro ao conectar com servidor', 'error');
+        }
+    }
+
     // EDITAR/EXCLUIR
     editarAluno(id) {
         const aluno = this.alunos.find(a => a.id === id);
@@ -779,6 +1047,77 @@ class SistemaEscolar {
         a.download = filename;
         a.click();
         URL.revokeObjectURL(url);
+    }
+
+    // ==================== MÉTODOS PARA SOLICITAÇÕES DE MATRÍCULA ====================
+
+    async aprovarSolicitacao(solicitacaoId) {
+        const turmaSelect = document.getElementById(`turma-${solicitacaoId}`);
+        const turmaId = turmaSelect.value;
+        
+        if (!turmaId) {
+            this.showToast('Selecione uma turma para aprovar a solicitação', 'error');
+            return;
+        }
+
+        const resposta = prompt('Digite uma mensagem para o responsável (opcional):');
+        
+        try {
+            const response = await this.fazerRequisicao(`/solicitacoes-matricula/${solicitacaoId}/aprovar`, {
+                method: 'PUT',
+                body: JSON.stringify({
+                    turma_id: parseInt(turmaId),
+                    resposta_admin: resposta || 'Solicitação aprovada com sucesso!'
+                })
+            });
+
+            if (response.ok) {
+                const result = await response.json();
+                this.showToast('Solicitação aprovada! Aluno criado com sucesso.', 'success');
+                await this.carregarDados();
+                this.renderizar();
+            } else {
+                const error = await response.json();
+                this.showToast('Erro: ' + error.detail, 'error');
+            }
+        } catch (error) {
+            console.error('❌ Erro ao aprovar solicitação:', error);
+            this.showToast('Erro ao conectar com servidor', 'error');
+        }
+    }
+
+    async rejeitarSolicitacao(solicitacaoId) {
+        const resposta = prompt('Digite o motivo da rejeição:');
+        
+        if (!resposta) {
+            this.showToast('É necessário informar o motivo da rejeição', 'error');
+            return;
+        }
+
+        if (!confirm('Tem certeza que deseja rejeitar esta solicitação?')) {
+            return;
+        }
+
+        try {
+            const response = await this.fazerRequisicao(`/solicitacoes-matricula/${solicitacaoId}/rejeitar`, {
+                method: 'PUT',
+                body: JSON.stringify({
+                    resposta_admin: resposta
+                })
+            });
+
+            if (response.ok) {
+                this.showToast('Solicitação rejeitada', 'success');
+                await this.carregarDados();
+                this.renderizar();
+            } else {
+                const error = await response.json();
+                this.showToast('Erro: ' + error.detail, 'error');
+            }
+        } catch (error) {
+            console.error('❌ Erro ao rejeitar solicitação:', error);
+            this.showToast('Erro ao conectar com servidor', 'error');
+        }
     }
 
     // UTILITÁRIOS
