@@ -190,6 +190,31 @@ class SistemaEscolar {
             this.filtrarAlunos(e.target.value);
         });
         
+        // Ordenação de alunos
+        const sortAlunos = document.getElementById('sortAlunos');
+        if (sortAlunos) {
+            sortAlunos.addEventListener('change', (e) => {
+                this.ordenarAlunos(e.target.value);
+            });
+        }
+        
+        // Filtros
+        const filterTurma = document.getElementById('filterTurma');
+        const filterStatus = document.getElementById('filterStatus');
+        const clearFilters = document.getElementById('clearFilters');
+        
+        if (filterTurma) {
+            filterTurma.addEventListener('change', () => this.aplicarFiltros());
+        }
+        
+        if (filterStatus) {
+            filterStatus.addEventListener('change', () => this.aplicarFiltros());
+        }
+        
+        if (clearFilters) {
+            clearFilters.addEventListener('click', () => this.limparFiltros());
+        }
+        
         // Configurar botões de exportação
         this.configurarBotoesExportacao();
     }
@@ -299,10 +324,55 @@ class SistemaEscolar {
             }
 
             console.log(`✅ Carregados: ${this.alunos.length} alunos, ${this.turmas.length} turmas, ${this.professores.length} professores, ${this.solicitacoes.length} solicitações`);
+            
+            // Popular filtros
+            this.popularFiltros();
         } catch (error) {
             console.error('❌ Erro ao carregar dados:', error);
             this.showToast('Erro ao carregar dados', 'error');
         }
+    }
+
+    popularFiltros() {
+        // Popular filtro de turmas
+        const filterTurma = document.getElementById('filterTurma');
+        if (filterTurma && this.turmas.length > 0) {
+            // Limpar opções existentes (exceto a primeira)
+            filterTurma.innerHTML = '<option value="">Todas as turmas</option>';
+            
+            this.turmas.forEach(turma => {
+                const option = document.createElement('option');
+                option.value = turma.id;
+                option.textContent = turma.nome;
+                filterTurma.appendChild(option);
+            });
+        }
+        
+        // Popular select de turmas nos modais também
+        this.popularSelectTurmas();
+    }
+
+    popularSelectTurmas() {
+        const selects = ['alunoTurma', 'matriculaTurma'];
+        selects.forEach(selectId => {
+            const select = document.getElementById(selectId);
+            if (select) {
+                const valorAtual = select.value;
+                select.innerHTML = '<option value="">Sem turma</option>';
+                
+                this.turmas.forEach(turma => {
+                    const option = document.createElement('option');
+                    option.value = turma.id;
+                    option.textContent = turma.nome;
+                    select.appendChild(option);
+                });
+                
+                // Restaurar valor se havia um selecionado
+                if (valorAtual) {
+                    select.value = valorAtual;
+                }
+            }
+        });
     }
 
     renderizar() {
@@ -373,13 +443,29 @@ class SistemaEscolar {
 
         container.innerHTML = this.turmas.map(turma => {
             const alunosNaTurma = this.alunos.filter(a => a.turma_id === turma.id).length;
+            const vagasDisponiveis = turma.capacidade - alunosNaTurma;
+            const percentualOcupacao = Math.round((alunosNaTurma / turma.capacidade) * 100);
             
             return `
                 <div class="turma-card">
                     <h3>${turma.nome}</h3>
-                    <p><strong>Capacidade:</strong> ${turma.capacidade} alunos</p>
-                    <p><strong>Matriculados:</strong> ${alunosNaTurma} alunos</p>
-                    <p><strong>Vagas disponíveis:</strong> ${turma.capacidade - alunosNaTurma}</p>
+                    <div class="capacity-section">
+                        <div class="capacity-item">
+                            <div class="capacity-number">${turma.capacidade}</div>
+                            <div class="capacity-label">Capacidade</div>
+                        </div>
+                        <div class="capacity-item">
+                            <div class="capacity-number">${alunosNaTurma}</div>
+                            <div class="capacity-label">Matriculados</div>
+                        </div>
+                        <div class="capacity-item">
+                            <div class="capacity-number">${vagasDisponiveis}</div>
+                            <div class="capacity-label">Vagas</div>
+                        </div>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: ${percentualOcupacao}%"></div>
+                    </div>
                     <div class="actions">
                         <button onclick="sistema.editarTurma(${turma.id})" class="btn-edit">Editar</button>
                         <button onclick="sistema.excluirTurma(${turma.id})" class="btn-delete">Excluir</button>
@@ -402,15 +488,33 @@ class SistemaEscolar {
         }
 
         container.innerHTML = this.professores.map(professor => {
-            const statusClass = professor.status === 'ativo' ? 'status-ativo' : 'status-inativo';
+            const statusClass = professor.status === 'ativo' ? 'ativo' : 'inativo';
             
             return `
                 <div class="professor-card">
-                    <h3>👨‍🏫 ${professor.nome}</h3>
-                    <p><strong>Email:</strong> ${professor.email}</p>
-                    <p><strong>Especialidade:</strong> ${professor.especialidade}</p>
-                    <p><strong>Telefone:</strong> ${professor.telefone || 'Não informado'}</p>
-                    <p><strong>Status:</strong> <span class="status-badge ${statusClass}">${professor.status}</span></p>
+                    <div class="professor-header">
+                        <div class="professor-avatar">👨‍🏫</div>
+                        <div class="professor-name">
+                            <h3>${professor.nome}</h3>
+                            <div class="especialidade-badge">${professor.especialidade}</div>
+                        </div>
+                    </div>
+                    
+                    <div class="contact-info">
+                        <div class="contact-item">
+                            <div class="icon">📧</div>
+                            <span class="label">Email</span>
+                            <div class="value">${professor.email}</div>
+                        </div>
+                        <div class="contact-item">
+                            <div class="icon">📞</div>
+                            <span class="label">Telefone</span>
+                            <div class="value">${professor.telefone || 'Não informado'}</div>
+                        </div>
+                    </div>
+                    
+                    <div class="status ${statusClass}">${professor.status}</div>
+                    
                     <div class="actions">
                         <button onclick="sistema.editarProfessor(${professor.id})" class="btn-edit">Editar</button>
                         <button onclick="sistema.excluirProfessor(${professor.id})" class="btn-delete">Excluir</button>
@@ -945,22 +1049,148 @@ class SistemaEscolar {
 
     // FILTROS
     filtrarAlunos(termo) {
-        if (!termo || termo.trim() === '') {
-            // Se não há termo de busca, mostrar todos os alunos
-            this.renderizarAlunos();
-            return;
-        }
-        
-        const alunosFiltrados = this.alunos.filter(aluno => 
-            aluno.nome.toLowerCase().includes(termo.toLowerCase()) ||
-            (aluno.email && aluno.email.toLowerCase().includes(termo.toLowerCase()))
-        );
-
-        // Renderizar apenas os filtrados
-        this.renderizarAlunosFiltrados(alunosFiltrados);
+        // Usar o sistema integrado de filtros
+        this.aplicarFiltros();
     }
 
     renderizarAlunosFiltrados(alunos) {
+        const container = document.getElementById('alunosList');
+        if (!container) return;
+
+        if (alunos.length === 0) {
+            container.innerHTML = '<p class="no-data">Nenhum aluno encontrado</p>';
+            return;
+        }
+
+        container.innerHTML = alunos.map(aluno => {
+            const turma = this.turmas.find(t => t.id === aluno.turma_id);
+            const idade = this.calcularIdade(aluno.data_nascimento);
+            
+            return `
+                <div class="aluno-card">
+                    <h3>${aluno.nome}</h3>
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <span class="label">🎂 Idade</span>
+                            <span class="value">${idade} anos</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="label">📧 Email</span>
+                            <span class="value">${aluno.email || 'Não informado'}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="label">📊 Status</span>
+                            <span class="value status ${aluno.status}">${aluno.status}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="label">🏫 Turma</span>
+                            <span class="value">${turma ? turma.nome : 'Sem turma'}</span>
+                        </div>
+                    </div>
+                    ${this.currentUser.tipo_usuario === 'admin' ? `
+                        <div class="actions">
+                            <button onclick="sistema.editarAluno(${aluno.id})" class="btn-edit">✏️ Editar</button>
+                            <button onclick="sistema.excluirAluno(${aluno.id})" class="btn-delete">🗑️ Excluir</button>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+        }).join('');
+    }
+
+    aplicarFiltros() {
+        const filterTurma = document.getElementById('filterTurma');
+        const filterStatus = document.getElementById('filterStatus');
+        const searchInput = document.getElementById('searchInput');
+        
+        let alunosFiltrados = [...this.alunos];
+        
+        // Filtro por turma
+        if (filterTurma && filterTurma.value) {
+            const turmaId = parseInt(filterTurma.value);
+            alunosFiltrados = alunosFiltrados.filter(aluno => aluno.turma_id === turmaId);
+        }
+        
+        // Filtro por status
+        if (filterStatus && filterStatus.value) {
+            alunosFiltrados = alunosFiltrados.filter(aluno => aluno.status === filterStatus.value);
+        }
+        
+        // Filtro por texto de busca
+        if (searchInput && searchInput.value.trim()) {
+            const termo = searchInput.value.trim().toLowerCase();
+            alunosFiltrados = alunosFiltrados.filter(aluno => 
+                aluno.nome.toLowerCase().includes(termo) ||
+                (aluno.email && aluno.email.toLowerCase().includes(termo))
+            );
+        }
+        
+        // Aplicar ordenação se houver
+        const sortSelect = document.getElementById('sortAlunos');
+        if (sortSelect && sortSelect.value) {
+            alunosFiltrados = this.aplicarOrdenacao(alunosFiltrados, sortSelect.value);
+        }
+        
+        this.renderizarAlunosOrdenados(alunosFiltrados);
+    }
+
+    limparFiltros() {
+        const filterTurma = document.getElementById('filterTurma');
+        const filterStatus = document.getElementById('filterStatus');
+        const searchInput = document.getElementById('searchInput');
+        const sortSelect = document.getElementById('sortAlunos');
+        
+        if (filterTurma) filterTurma.value = '';
+        if (filterStatus) filterStatus.value = '';
+        if (searchInput) searchInput.value = '';
+        if (sortSelect) sortSelect.value = 'nome';
+        
+        this.renderizarAlunos();
+    }
+
+    aplicarOrdenacao(alunos, criterio) {
+        let alunosOrdenados = [...alunos];
+
+        switch (criterio) {
+            case 'nome':
+                alunosOrdenados.sort((a, b) => a.nome.localeCompare(b.nome));
+                break;
+            case 'nome-desc':
+                alunosOrdenados.sort((a, b) => b.nome.localeCompare(a.nome));
+                break;
+            case 'idade':
+                alunosOrdenados.sort((a, b) => {
+                    const idadeA = this.calcularIdade(a.data_nascimento);
+                    const idadeB = this.calcularIdade(b.data_nascimento);
+                    return idadeA - idadeB;
+                });
+                break;
+            case 'idade-desc':
+                alunosOrdenados.sort((a, b) => {
+                    const idadeA = this.calcularIdade(a.data_nascimento);
+                    const idadeB = this.calcularIdade(b.data_nascimento);
+                    return idadeB - idadeA;
+                });
+                break;
+            default:
+                break;
+        }
+        
+        return alunosOrdenados;
+    }
+
+    ordenarAlunos(criterio) {
+        console.log('🔄 Ordenando alunos por:', criterio);
+        
+        if (!this.alunos || this.alunos.length === 0) {
+            return;
+        }
+
+        const alunosOrdenados = this.aplicarOrdenacao(this.alunos, criterio);
+        this.renderizarAlunosOrdenados(alunosOrdenados);
+    }
+
+    renderizarAlunosOrdenados(alunos) {
         const container = document.getElementById('alunosList');
         if (!container) return;
 
